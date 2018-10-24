@@ -1,0 +1,5 @@
+#!/bin/bash
+version='201810'
+# Note that we want to avoid copying files from Eclipse.
+tar -cf vsc-tutorial-${version}.tar README.txt man/man1/*.1 src/*
+bzip2 vsc-tutorial-${version}.tar

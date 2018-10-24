@@ -1,0 +1,5 @@
+# Exclude git files and other files starting with .
+.* export-ignore
+make_tar export-ignore
+bin export-ignore
+testscripts export-ignore

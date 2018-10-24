@@ -1,0 +1,4 @@
+# Example for worker parameter sweep with a spreadsheet table as input.
+# - Load the worker module
+# - Launch with wsub: 
+#   wsub -data data.csv -batch weather.pbs.sh

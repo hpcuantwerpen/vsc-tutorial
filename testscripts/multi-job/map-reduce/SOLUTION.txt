@@ -1,0 +1,4 @@
+# Load the worker module
+# Run with:
+# module load $VSC_INSTITUTE_CLUSTER/supported worker
+# wsub -prolog pre.sh -batch test_set.pbs.sh -epilog post.sh -t 1-100

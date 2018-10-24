@@ -1,0 +1,11 @@
+Extend the example: 
+a.  A first job writes the number 10 to the file “sim1.txt”
+b.  Job two executes after the first. It reads the number from “sim1.txt”, 
+    multiplies it by 2 and writes it to “sim2.txt”
+c.  To result of the second simulation, two different perturbations are applied: 
+    add 1 and 2 to the number in sim2.txt, and the third “simulation” that starts
+    from that perturbed value multiplies the result by 2 and writes it in a file
+    with the name sim3_pert_<…>.txt with <…> the perturbation. 
+Use dependent jobs to make sure that the second “simulation” runs after the first one 
+and that both “simulations” for the perturbations can run concurrently and after the
+second “simulation”.

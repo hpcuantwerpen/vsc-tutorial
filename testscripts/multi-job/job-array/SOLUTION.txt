@@ -1,0 +1,13 @@
+# Examples for array jobs via Torque and Worker
+#
+# Launch the Torque array job:
+# qsub -t 1-100 torque_job_array.pbs.sh
+#
+# Launch the worker array job:
+# module load $VSC_INSTITTUE_CLUSTER/supported worker
+# wsub -t 1-100 -batch worker_job_array.pbs.sh
+#
+# Note the difference in the resource specifications:
+# - Torque array job: Resources for a single job of the array
+# - Worker: Resources for the overall worker process, so all array jobs
+#   together.
