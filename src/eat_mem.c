@@ -1,22 +1,22 @@
 /*
  * VSC        : Flemish Supercomputing Centre
  * Tutorial   : Introduction to HPC
- * Description: Allocate and cConsume a given amount of memory
+ * Description: Allocate and consume a given amount of memory
  */
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 
-const int MB         = 1024 * 1024;
-const int default_GB = 3;
-const int max_GB     = 12;
-
+const unsigned int MB         = 1024 * 1024;
+const unsigned int default_GB = 3;
+const unsigned int max_GB     = 256;
+const unsigned int sleeptime  = 20000;       // Time to sleep after allocating one block (microseconds)
 
 int main(int argc, char *argv[])
 {
-    register int i;
-    int tot_GB = default_GB;
+    unsigned int tot_GB = default_GB;
+    char buffer[MB];
     char* mem[MB];
 
     if (argc > 2) {
@@ -39,13 +39,11 @@ int main(int argc, char *argv[])
     }
     printf("eat_mem: Consuming %d Gigabyte of memory.\n", tot_GB);
 
-    char buffer[MB];
     // Fill up a buffer of 1 MB with random digits
-    for (i = 0; i < MB; i++)
-        buffer[i] = rand()%256;
+    for (int i = 0; i < MB; i++) buffer[i] = rand()%256;
 
     // Consume memory, 1 MB at a time
-    for (i = 0; i < tot_GB*1024; i++) {
+    for (int i = 0; i < tot_GB*1024; i++) {
         mem[i] = (char *) malloc(MB*sizeof(char));
         if (mem[i] == NULL) {
             printf("eat_mem: ERROR: Out of memory\n");
@@ -53,7 +51,7 @@ int main(int argc, char *argv[])
         }
         else {
             memcpy(mem[i], (void *) buffer, MB);
-            usleep (20000); // Wait 20 microseconds
+            usleep (sleeptime); // Wait 20 microseconds
         }
     }
 
@@ -61,7 +59,7 @@ int main(int argc, char *argv[])
     sleep (10);
 
     // Free memory, 1 MB at a time
-    for (i = 0; i < tot_GB*1024; i++) {
+    for (int i = 0; i < tot_GB*1024; i++) {
         free(mem[i]);
     }
 

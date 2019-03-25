@@ -13,6 +13,8 @@ MPICC   ?= mpiicc
 CFLAGS  ?= -O2
 OMPFLAG ?= -qopenmp
 
+.SUFFIXES:
+
 examples : bindir \
 		   ../bin/omp_hello ../bin/mpi_hello ../bin/mpi_omp_hello \
 		   ../bin/eat_mem
