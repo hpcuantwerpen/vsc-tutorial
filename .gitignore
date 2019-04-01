@@ -1,0 +1,7 @@
+# Only put files here that result from the build process etc., not files
+# specific to a particular editor or IDE. The latter patterns should be defined
+# either in a global .gitignore (git config --global core.excludesfile ~/.gitignore)
+# or in .git/info/excludes on a per-repository basis.
+# In doing so, the .gitignore in the repository remains independent of any
+# particular IDE and remains relevant to all users of the repository.
+bin/
