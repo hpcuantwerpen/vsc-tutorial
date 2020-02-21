@@ -1,8 +1,6 @@
 #!/bin/bash
-#PBS -L tasks=1:lprocs=1:swap=1gb
-#PBS -l walltime=30:00
-
-cd "$PBS_O_WORKDIR"
+#SBATCH --ntasks=1 --cpus-per-task=1 --mem=1g
+#SBATCH --time=10:00
 
 # Part 1
 echo "10" >outputfile; sleep 30

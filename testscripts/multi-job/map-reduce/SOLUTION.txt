@@ -1,4 +1,49 @@
-# Load the worker module
-# Run with:
-# module load $VSC_INSTITUTE_CLUSTER/supported worker
-# wsub -prolog pre.sh -batch test_set.pbs.sh -epilog post.sh -t 1-100
+Example including preprocessing (map) generating the input data for each work
+item and postprocessing combining the results (reduce).
+
+* With a Slurm array job:
+  - Since in this case the pre- and postprocessing doesn't need much resources,
+    one could simply run the scripts pre.sh and post.sh on the login nodes 
+    respectively before submitting the job and after the job has finished.
+  - However, it is also possible to solve this problem with job arrays.
+    We have:
+     + One job that executes first and runs pre.sh: job script 
+       array-pre.slurm.
+     + An array job with one subjob for each input file: job script
+       array-run.slurm.
+     + One job that excutes after the complete array job has finished and
+       runs post.sh: job script array-reduce.slurm.
+    To make it easier to organise the job dependencies, we use the jsbatch 
+    command from our slurm-tools module. The process used to submit those
+    jobs is shown in array-submit-slurm.sh
+
+* In principle it is also possible to rework the post.sh file to be used 
+  with areduce. If we also use the log functions of atools, it is then
+  possible to do the reduction using only the results of the successfully
+  completed jobs. It does require a bit more scripting though.
+   + Preprocessing phase phase: atools-pre.slurm: no difference with the 
+     array job case.
+   + Compute phase: Compared to the array case, we added logging with 
+     atools. Job script: atools-run.slurm
+   + Reduction phase: We can use areduce. In this case, it only needs
+     to concatenate output files and for this simple case, no additional 
+     scripting is needed. The resulting job script is atools-reduce.slurm.
+     Note that even in more complicated cases, when we need to specify an
+     operator that creates the empty output and one that extracts data
+     from a single output and adds it to the combined output, one can 
+     often use some of the predifined scripts that come with atools.
+   We use again the jsbatch command from slurm-tools to make organising
+   the dependencies easier. The three jobs can be launched using
+   atools-submit-slurm.sh.
+
+* With worker on Torque clusters
+  - Load the worker module
+    module load calcua/supported worker
+  - Run with:
+    wsub -prolog pre.sh -batch test_set.pbs.sh -epilog post.sh -t 1-100
+
+* Array jobs with or without atools and Torque: The job dependency feature
+  doesn't seem to work properly. It also seems to be impossible to see the
+  exit code with qstat -f. The scripts that I tried are in this directory
+  but don't work as one would expect. The postprocessing job fails to see
+  the termination of the array job.

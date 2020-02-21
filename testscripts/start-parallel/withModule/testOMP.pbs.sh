@@ -5,7 +5,7 @@
 
 cd $PBS_O_WORKDIR
 
-module load $VSC_INSTITUTE_CLUSTER/supported
+module load calcua/supported
 module load vsc-tutorial/201810-intel-2018b
 module load torque-tools
 

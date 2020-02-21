@@ -1,0 +1,27 @@
+#! /bin/bash
+#PBS -L tasks=1:lprocs=1:swap=1gb
+#PBS -l walltime=5:00
+#
+
+module load calcua
+module load personal
+module load atools/torque
+
+cd $PBS_O_WORKDIR
+
+# Log the start
+alog --state start
+
+# Do the work
+INPUT_FILE="input_${PBS_ARRAYID}.dat"
+OUTPUT_FILE="output_${PBS_ARRAYID}.dat"
+./test_set ${PBS_ARRAYID} -input ${INPUT_FILE} -output ${OUTPUT_FILE}
+exit_code=$?
+
+# Sleep can be added to better see what happens in the squeue
+# (you'd never do that for a real job of course, this is only for the
+# exercises)
+sleep $(( 10 + $RANDOM % 5 ))
+
+# Log the end
+alog --state end --exit "$exit_code"

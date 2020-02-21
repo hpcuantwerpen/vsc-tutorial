@@ -9,3 +9,9 @@ c.  To result of the second simulation, two different perturbations are applied:
 Use dependent jobs to make sure that the second “simulation” runs after the first one 
 and that both “simulations” for the perturbations can run concurrently and after the
 second “simulation”.
+
+So at the end, you should have:
+* file sim1.txt containing the number 10
+* file sim2.txt containing the number 20
+* file sim3_pert_1.txt containing the number 42 (from (20+1)*2)
+* file sim3_pert_2.txt containing the number 44 (from (20+2)*2)

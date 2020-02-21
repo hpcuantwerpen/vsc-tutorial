@@ -1,4 +1,34 @@
-# Example for worker parameter sweep with a spreadsheet table as input.
-# - Load the worker module
-# - Launch with wsub: 
-#   wsub -data data.csv -batch weather.pbs.sh
+Example for worker parameter sweep with a spreadsheet table as input.
+
+* With atools and Slurm
+  - Load the atools/slurm module as we need to determine the number of
+    work items when submitting the job.
+    module load calcua/supported atools/slurm
+  - Launch the job as a Slurm array job, using atools arange to extract 
+    the index range from the data file.
+    sbatch --array $(arange --data data.csv) atools_weather.slurm.sh
+
+* With atools and Torque
+  - Load the atools/torque module as we need to determine the number of
+    work items when submitting the job.
+    module load calcua/supported atools/slurm
+  - Launch the job as a Torque array job, using atools arange to extract 
+    the index range from the data file.
+    qsub -t $(arange --data data.csv) atools_weather.pbs.sh
+
+* With worker on Torque clusters:
+  - Load the worker module
+    module load calcua/supported worker
+  - Launch with wsub: 
+    wsub -data data.csv -batch worker_weather.pbs.sh
+
+* Differences between the approaches:
+  - With atools, one file is generated per line in data.csv, though this can
+    be solved with aggregation in the postprocessing. With worker, all output
+    is already contained in a single file, worker_weather.pbs.sh.o<jobid>.
+  - With atools there is a lot more manual work. There is also added flexibility
+    though as work items can now also be parallel jobs.
+  - With atools, resource requests are for processing a single data item. With
+    worker, the resource request is for the complete worker job, so the total
+    time worker will need and the amount of cores that worker can use for all
+    jobs together.

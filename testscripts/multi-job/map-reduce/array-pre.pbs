@@ -1,0 +1,12 @@
+#! /bin/bash
+#PBS -L tasks=1:lprocs=1:swap=1gb
+#PBS -l walltime=5:00
+#
+
+cd $PBS_O_WORKDIR
+
+./pre.sh
+# Sleep can be added to better see what happens in the squeue
+# (you'd never do that for a real job of course, this is only for the
+# exercises)
+#sleep 20

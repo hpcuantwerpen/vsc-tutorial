@@ -1,0 +1,13 @@
+#! /bin/bash
+#PBS -L tasks=1:lprocs=1:swap=1gb
+#PBS -l walltime=5:00
+#
+
+module load calcua/supported
+module load atools/torque
+
+cd $PBS_O_WORKDIR
+
+areduce -t $(arange -t 1-100 --log atools-run.slurm.log* --completed) --pattern 'output/output_{t}.dat' \
+        --empty empty_body --reduce reduce_body --out all_output.txt
+        

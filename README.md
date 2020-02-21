@@ -9,7 +9,11 @@ commands are put in a bin directory and there are also man pages provided.
 We suggest to also copy the source files to illustrate various programming models
 to those who might be interested.
 
-## Example job script for omp_hello
+## Example job scripts for omp_hello
+
+omp_hello can be used to experiment with launching OpenMP jobs
+
+### With Torque/Moab
 
 ```bash
 #! /bin/bash
@@ -19,7 +23,7 @@ to those who might be interested.
 
 cd $PBS_O_WORKDIR
 
-module load $VSC_INSTITUTE_CLUSTER/supported
+module load calcua/supported
 module load vsc-tutorial/201810-intel-2018b
 module load torque-tools
 
@@ -27,7 +31,29 @@ export OMP_NUM_THREADS=$(torque-lprocs 0)
 omp_hello
 ```
 
-## Example job script for mpi_hello
+### With Slurm Workload manager
+
+```bash
+#! /bin/bash
+#SBATCH --ntasks=1 --cpus-per-task=5 --mem=4g
+#SBATCH--time=5:00
+#SBATCH --job-name=omp-hello-test
+
+module purge
+module load calcua/supported
+module load vsc-tutorial/201810-intel-2018b
+
+# The next line doesn't seem to be needed with Slurm but is safe to add.
+export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
+
+omp_hello
+```
+
+## Example job scripts for mpi_hello
+
+mpi_hello is a program to experiment with launching MPI jobs
+
+### With Torque/Moab
 
 ```bash
 #! /bin/bash
@@ -37,12 +63,32 @@ omp_hello
 
 cd $PBS_O_WORKDIR
 
-module load $VSC_INSTITUTE_CLUSTER/supported
+module load calcua/supported
 module load vsc-tutorial/201810-intel-2018b
 mpirun mpi_hello
 ```
 
-## Example job script for mpi_omp_hello
+### With Slurm Workload manager
+
+```bash
+#! /bin/bash
+#SBATCH --ntasks=40 --cpus-per-task=1 --mem-per-cpu=1g
+#SBATCH --time=5:00
+#SBATCH --job-name=MPI-hello-test
+
+module purge
+module load calcua/supported
+module load vsc-tutorial/201810-intel-2018b
+
+srun mpi_hello
+```
+
+## Example job scripts for mpi_omp_hello
+
+mpi_opm_hello is a program to experiment with launching hybrid
+MPI/OpenMP jobs.
+
+### With Torque/Moab
 
 ```bash
 #! /bin/bash
@@ -52,7 +98,7 @@ mpirun mpi_hello
 
 cd $PBS_O_WORKDIR
 
-module load $VSC_INSTITUTE_CLUSTER/supported
+module load calcua/supported
 module load vsc-tutorial/201810-intel-2018b
 module load torque-tools
 
@@ -60,4 +106,22 @@ export OMP_NUM_THREADS=$(torque-lprocs 0)
 torque-host-per-line >machinefile.$PBS_JOBID
 mpirun -machinefile machinefile.$PBS_JOBID mpi_omp_hello
 /bin/rm machinefile.$PBS_JOBID
+```
+
+### With Slurm Workload Manager
+
+```bash
+#! /bin/bash
+#SBATCH --ntasks=8 --cpus-per-task=5 --mem-per-cpu=512m
+#SBATCH --time=5:00
+#SBATCH --job-name=hybrid-hello-test
+
+module purge
+module load calcua/supported
+module load vsc-tutorial/201810-intel-2018b
+
+# The next line doesn't seem to be needed with Slurm but is safe to add.
+export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
+
+srun mpi_omp_hello
 ```

@@ -1,7 +1,7 @@
 #!/bin/bash -l
 # Example for qsub array jobs
 #PBS -L tasks=1:lprocs=1:swap=512mb
-#PBS -l walltime=00:15:00
+#PBS -l walltime=5:00
 
 cd $PBS_O_WORKDIR
 
