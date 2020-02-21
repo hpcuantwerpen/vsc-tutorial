@@ -10,7 +10,7 @@
 
 CC      ?= icc
 MPICC   ?= mpiicc
-CFLAGS  ?= -O2
+CFLAGS  ?= -O2 -xHost
 OMPFLAG ?= -qopenmp
 
 .SUFFIXES:
