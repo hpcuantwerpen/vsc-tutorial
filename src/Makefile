@@ -17,13 +17,13 @@ OMPFLAG ?= -qopenmp
 
 examples : bindir \
 		   ../bin/omp_hello ../bin/mpi_hello ../bin/mpi_omp_hello \
-		   ../bin/eat_mem
+		   ../bin/eat_mem   ../bin/eat_cpu   ../bin/eat_disk
 
 clean : 
 	-/bin/rm ../bin/*
 	
 bindir :
-	-mkdir ../bin
+	-mkdir -p ../bin
 
 omp_hello : ../bin/omp_hello
 ../bin/omp_hello : omp_hello.c
@@ -39,4 +39,12 @@ mpi_omp_hello : ../bin/mpi_omp_hello
 
 eat_mem : ../bin/eat_mem
 ../bin/eat_mem : eat_mem.c
+	$(CC) $(CFLAGS) $< -o $@
+
+eat_cpu : ../bin/eat_cpu
+../bin/eat_cpu : eat_cpu.c
+	$(CC) $(CFLAGS) $< -o $@
+
+eat_disk : ../bin/eat_disk
+../bin/eat_disk : eat_disk.c
 	$(CC) $(CFLAGS) $< -o $@

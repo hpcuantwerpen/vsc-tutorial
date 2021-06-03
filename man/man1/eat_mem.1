@@ -1,18 +1,20 @@
 .\" Written by Kurt Lust, kurt.lust@uantwerpen.be.
-.TH man 1 "20 February 2018" "1.0" "eat_mem (vsc-tutorial) command"
+.TH man 1 "17 June 2021" "1.1" "eat_mem (vsc-tutorial) command"
 
 .SH NAME
 eat_mem \- Single-threaded program that just consumes memory
 
 .SH DESCRIPTION
-eat_mem is a simple single-threaded program that slowly consumes a 
+eat_mem is a simple single-threaded program that slowly consumes a
 given amount of memory. Without command line arguments, 3 GB of memory
 will be allocated in chunks of 1 MB and intialised with random values.
 A single integer command line argument can be specified to change
 the amount of memory consumed by this example application.
 
+The program is part of the VSC tutorial, chapter 11.
+
 .SH SEE ALSO
-vsc-tutorial(1)
+vsc-tutorial(1), eat_cpu(1), eat_disk(1)
 
 .SH AUTHOR
 Kurt Lust (Kurt.Lust@uantwerpen.be)
