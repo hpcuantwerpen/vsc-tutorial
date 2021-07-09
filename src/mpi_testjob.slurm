@@ -1,7 +1,7 @@
 #! /bin/bash
 #SBATCH --time=2:00
 #SBATCH --partition=debug
-#SBATCH --ntasks=4 --cpus-per-task=4
+#SBATCH --ntasks=8 --cpus-per-task=1
 
 module --force purge
 ml calcua/2020a

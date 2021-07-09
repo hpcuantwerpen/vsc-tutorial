@@ -22,9 +22,9 @@
 #define EXIT_SUCCESS         0
 #define EXIT_WRONG_ARGUMENT  1
 
-#define HOSTNAMELENGTH 100             // Not really good practice to fix the length of strings as it can cause
-                                       // buffer overflows (though not in this case), but let's not make it harder
-                                       // than needed given the purpose of this program.
+#define HOSTNAMELENGTH 20              // Not really good practice to fix the length of strings as it can cause
+                                       // buffer overflows, but we've been careful to ensure that this does not
+                                       // occur and have no problems with chopping of part of the hostname.
 #define LABELLENGTH    20
 
 typedef struct {
@@ -75,7 +75,7 @@ void print_help() {
 //
 
 void get_args( int argc, char **argv, int mpi_myrank,
-		       int *option_use_label, char *option_label ) {
+		       char *option_label ) {
 
 	char *exe_name;
 
@@ -93,7 +93,6 @@ void get_args( int argc, char **argv, int mpi_myrank,
 				fprintf( stderr, "%s: No label found for -l\n", exe_name );
 				exit( EXIT_WRONG_ARGUMENT );
 			}
-            *option_use_label = 1;
             argv++; argc--; // Skip to the next argument which should be the label.
             strncpy( option_label, *argv, (size_t) LABELLENGTH );
             option_label[LABELLENGTH] = '\0';  // Just to be very sure that the string is null-terminated.
@@ -120,19 +119,19 @@ and OpenMP threads per process.
 
 int main( int argc, char *argv[] )
 {
-	int  option_use_label = 0;          // Set to nonzero value if -l is specified.
-	char option_label[LABELLENGTH+1];   // Space for the label (if used)
+	char option_label[LABELLENGTH+1] = "";   // Space for the label (if used), initialize with empty string.
 
 	int label_length;
 	int max_label_length;
 
-    int mpi_myrank;                     // My MPI rank
-	int mpi_numranks;                   // Total number of MPI ranks
-    int openmp_numthreads;              // Number of OpenMP threads.
-    int max_openmp_numthreads;          // Maximal number of threads per process over all MPI processes.
-    int sum_openmp_numthreads;          // Total number of OpenMP threads over all MPI processes.
-    t_rankData *my_rankData;            // Rank data for this MPI process
-    t_rankData *buf_rankData;           // Buffer to receive data from another process.
+    int mpi_myrank;                          // My MPI rank
+	int mpi_numranks;                        // Total number of MPI ranks
+    int openmp_numthreads;                   // Number of OpenMP threads.
+    int max_openmp_numthreads;               // Maximal number of threads per process over all MPI processes.
+    int min_openmp_numthreads;               // Minimal number of threads per process over all MPI processes.
+    int sum_openmp_numthreads;               // Total number of OpenMP threads over all MPI processes.
+    t_rankData *my_rankData;                 // Rank data for this MPI process
+    t_rankData *buf_rankData;                // Buffer to receive data from another process.
     int my_rankData_size, buf_rankData_size;
     int error;
     MPI_Request request;
@@ -152,24 +151,39 @@ int main( int argc, char *argv[] )
     { if ( omp_get_thread_num() == 0 ) openmp_numthreads = omp_get_num_threads(); } // Must be in a parallel session to get the proper number.
 
     MPI_Reduce( &openmp_numthreads, &max_openmp_numthreads, 1, MPI_INT, MPI_MAX, 0, MPI_COMM_WORLD );
+    MPI_Reduce( &openmp_numthreads, &min_openmp_numthreads, 1, MPI_INT, MPI_MIN, 0, MPI_COMM_WORLD );
     MPI_Reduce( &openmp_numthreads, &sum_openmp_numthreads, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD );
 
     //
     // Read the command line arguments
     //
-    option_label[0] = '\0'; // Make sure it is always initialised to at least the empty string.
-    get_args( argc, argv, mpi_myrank,
-    		  &option_use_label, option_label );
+    // option_label[0] = '\0'; // Make sure it is always initialised to at least the empty string.
+    get_args( argc, argv, mpi_myrank, option_label );
 
     // Compute the maximum length of the labels, and take into account that in a heterogeneous
     // job some parts may not be labeled.
-    label_length = strlen( option_label ); // We can in fact always use strlen as option_label ahs been initialised ot the empty string.
+    label_length = strlen( option_label ); // We can in fact always use strlen as option_label has been initialised to the empty string.
     MPI_Reduce( &label_length, &max_label_length, 1, MPI_INT, MPI_MAX, 0, MPI_COMM_WORLD );
 
     // Print some information on the data just computed.
     if ( mpi_myrank == 0 )
-        printf( "Running a total of %d threads in %d MPI ranks (maximum %d threads per rank).\n",
-                sum_openmp_numthreads, mpi_numranks, max_openmp_numthreads );
+    	if ( mpi_numranks == 1 ) {
+    		if ( max_openmp_numthreads == 1 ) {
+    			printf( "\nRunning a single thread in a single process.\n" );
+    		} else {
+    			printf( "\nRunning %d threads in a single process\n", max_openmp_numthreads );
+    		}
+    	} else {
+            if ( max_openmp_numthreads == 1 ) {
+            	printf( "\nRunning %d single-threaded MPI ranks.\n", mpi_numranks );
+            } else if ( max_openmp_numthreads == min_openmp_numthreads ) {
+            	printf( "\nRunning %d MPI ranks with %d threads each (total number of threads: %d).\n",
+            			mpi_numranks, max_openmp_numthreads, sum_openmp_numthreads );
+            } else {
+            	printf( "\nRunning %d MPI ranks with between %d and %d threads each (total number of threads: %d).\n",
+            			mpi_numranks, min_openmp_numthreads, max_openmp_numthreads, sum_openmp_numthreads );
+            }
+    	}
 
     // Now create the t_rankData data structures.
 
@@ -220,7 +234,7 @@ int main( int argc, char *argv[] )
 
         const char *label_sep = ( ( max_label_length > 0 ) ? sep_colon : empty_string );
 
-        printf( "++ Output format:%*s             (MPIrank,thread) of (#MPIprocs,#threads in rank) on cpu <cpu> of <host>\n",
+        printf( "\n++ Output format:%*s             (MPIrank,thread) of (#MPIprocs,#threads in rank) on cpu <cpu> of <host>\n",
         		(max_label_length > 0) ? max_label_length + 2 : 0, empty_string );
 
         for ( int c1 = 0; c1 < mpi_numranks; c1++ ) {
@@ -236,6 +250,8 @@ int main( int argc, char *argv[] )
 
             }  // end for ( int c2...
         }  // end for ( int c1...
+
+        printf( "\n" );
 
     } // end if ( mpi_myrank == 0 )
 
