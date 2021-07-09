@@ -16,7 +16,7 @@ OMPFLAG ?= -qopenmp
 .SUFFIXES:
 
 examples : bindir \
-		   ../bin/omp_hello ../bin/mpi_hello ../bin/mpi_omp_hello \
+		   ../bin/omp_hello ../bin/mpi_hello ../bin/mpi_omp_hello ../bin/hybrid_hello \
 		   ../bin/eat_mem   ../bin/eat_cpu   ../bin/eat_disk
 
 clean : 
@@ -35,6 +35,10 @@ mpi_hello : ../bin/mpi_hello
 
 mpi_omp_hello : ../bin/mpi_omp_hello
 ../bin/mpi_omp_hello : mpi_omp_hello.c
+	$(MPICC) $(CFLAGS) $(OMPFLAG) $< -o $@
+
+hybrid_hello : ../bin/hybrid_hello
+../bin/hybrid_hello : hybrid_hello.c
 	$(MPICC) $(CFLAGS) $(OMPFLAG) $< -o $@
 
 eat_mem : ../bin/eat_mem
