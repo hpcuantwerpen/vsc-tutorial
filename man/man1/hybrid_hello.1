@@ -33,6 +33,17 @@ Print help information about the command
 \fB\-l\fR \fI\,LABEL\/\fR
 Label the output of this process with \fI\,LABEL\/\fR. This automatically
 enables displaying labels.
+.TP
+\fB\-w\fR \fI\,TIME\/\fR
+keeps all allocated CPUs busy for approximately \fI\,TIME\/\fR seconds
+computing the surface of the Mandelbrot fractal with a naive
+Monte Carlo algorithm so that a user can logon to the nodes
+and see what is happening. At the end it will print the
+allocation of the threads again as the OS may have improved
+the spreading of the threads over the cores.
+If different values are given for different parts in a
+heterogeneous job, the largest will be used and applied to all
+components of the heterogeneous job.
 
 .SH EXAMPLE
 
