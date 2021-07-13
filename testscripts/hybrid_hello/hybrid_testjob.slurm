@@ -7,4 +7,5 @@ module --force purge
 ml calcua/2020a
 ml intel/2020a
 
-srun ../bin/hybrid_hello
+export OMP_PROC_BIND=true
+srun ../../bin/hybrid_hello -l test -w 5 -n -r
