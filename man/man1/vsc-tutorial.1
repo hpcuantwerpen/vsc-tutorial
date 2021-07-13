@@ -10,24 +10,41 @@ vsc-tutorial contains various small programs that are used in the HPC hands-on
 tutorials at UAntwerp, e.g., to start various types of programs.
 
 Commands:
-.IP \[bu] 2
-omp_hello: Simple program to test starting an OpenMP program
-.IP \[bu]
-mpi_hello: Simple program to test starting a MPI program
-.IP \[bu]
-mpi_omp_hello: Simple program to test starting a hybrid MPI/OpenMP program
-.IP \[bu]
-eat_mem: Single-threaded program that consumes a given amount of memory to test
+.TP
+\fBomp_hello\fR
+Simple program to test starting an OpenMP program
+
+.TP
+\fBmpi_hello\fR
+Simple program to test starting a MPI program
+
+.TP
+\fBmpi_omp_hello\fR
+Simple program to test starting a hybrid MPI/OpenMP program
+
+.TP
+\fBhybrid_hello\fR
+A variant of mpi_omp_hello, suitable to test heterogeneous jobs and with
+options to put some load on the allocated CPUs and to print thread affinity
+in two different formats.
+
+.TP
+\fBeat_mem\fR
+Single-threaded program that consumes a given amount of memory to test
 memory allocations
-.IP \[bu]
-eat_cpu: Single-threaded program that only serves to put some load on a CPU to
+
+.TP
+\fBeat_cpu\fR
+Single-threaded program that only serves to put some load on a CPU to
 experiment with monitoring jobs
-.IP \[bu]
-eat_disk: Single-threaded program that consumes a given amount of memory to test
+
+.TP
+\fBeat_disk\fR
+Single-threaded program that consumes a given amount of memory to test
 memory allocations
 
 .SH SEE ALSO
-omp_hello(1), mpi_hello(1), mpi_omp_hello(1), eat_mem(1), eat_cpu(1), eat_disk(1)
+omp_hello(1), mpi_hello(1), mpi_omp_hello(1), hybrid_hello(1), eat_mem(1), eat_cpu(1), eat_disk(1)
 
 .SH AUTHOR
 Kurt Lust (Kurt.Lust@uantwerpen.be)
