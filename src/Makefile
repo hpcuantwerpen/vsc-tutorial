@@ -7,6 +7,11 @@
 # not defined in the environment or the make command line as otherwise the 
 # built-in values will be used rather than the defaults given below.
 #
+# Note: Preprocessor macros that can be defined:
+#  * DEBUG: Prints some debug information in hybrid_hello.
+#  * HAVE_NUMALIB: Define this if the system has libnuma (relevant for
+#    hybrid_hello)
+#
 
 CC      ?= icc
 MPICC   ?= mpiicc
@@ -39,7 +44,8 @@ mpi_omp_hello : ../bin/mpi_omp_hello
 
 hybrid_hello : ../bin/hybrid_hello
 ../bin/hybrid_hello : hybrid_hello.c
-	$(MPICC) $(CFLAGS) $(OMPFLAG) $< -o $@
+	$(MPICC) $(CFLAGS) $(OMPFLAG) -DHAVE_NUMALIB $< -lnuma -o $@
+#	$(MPICC) $(CFLAGS) $(OMPFLAG) -DDEBUG $< -o $@
 
 eat_mem : ../bin/eat_mem
 ../bin/eat_mem : eat_mem.c

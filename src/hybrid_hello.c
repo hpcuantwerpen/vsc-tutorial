@@ -17,6 +17,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <limits.h>
+#include <math.h>
 #include <time.h>
 #include <sched.h>
 #ifdef HAVE_NUMALIB
@@ -25,6 +26,11 @@
 
 #include <mpi.h>
 #include <omp.h>
+
+#define max(a,b)  ( (a) < (b) ? (b) : (a) )
+#define min(a,b)  ( (a) > (b) ? (b) : (a) )
+#define IWIDTH(v) ( (v) > 9 ?  ((int)(floor(log10((double)(v)))) + 1 ) : (1) )
+
 
 #define EXIT_SUCCESS         0
 #define EXIT_WRONG_ARGUMENT  1
@@ -75,7 +81,15 @@ typedef struct {
 void print_help() {
 
 	fprintf( stderr,
-        "hybrid_hello\n\n"
+        "hybrid_hello\n"
+		"\n"
+		"This program prints out useful information on the distribution of processes\n"
+		"and threads in a hybrid MPI/OpenMP application.\n"
+		"It also provides information on where each thread is running and how threads\n"
+		"are bound to CPUs. It also supports MPMD startup, though you would use the\n"
+		"same executable for each part of the heterogeneous job and instead use a\n"
+		"different label for each part.\n"
+			"\n"
 		"Flags accepted:\n"
 		" -h         produce help information and exit\n"
 		" -l <label> specify a label to use in the output for this process\n"
@@ -90,13 +104,17 @@ void print_help() {
 	    "            If different values are given for different parts in a\n"
 		"            heterogeneous job, the largest will be used and applied to all\n"
         "            components of the heterogeneous job.\n"
+		" -n         Show the NUMA affinity mask: Once ASCII character per virtual core,\n"
+		"            where a number or capital letter denotes that the core can be used\n"
+		"            and the number or letter denotes the NUMA group (or a * if the\n"
+		"            number of the NUMA group would be 36 or larger) and a dot denotes\n"
+		"            that the core is not used.\n"
+		" -r         Numeric representation of the affinity mask as a series of ranges\n"
+		"            of cores.\n"
 		"\n"
-		"This program prints out usefull information ont he distribution of processes\n"
-		"and threads in a hybrid MPI/OpenMP application.\n"
-		"It also provides information on where each thread is running and how threads\n"
-		"are bound to CPUs. It also supports MPMD startup, though you would use the\n"
-		"same executable for each part of the heterogeneous job and instead use a\n"
-		"different label for each part.\n\n"
+		"In a heterogeneous job, the -w, -n and -r options need to be specified for\n"
+        "only one of the components of the job but will apply to all components.\n"
+        "\n"
     );
 
 }
@@ -173,49 +191,60 @@ int get_cpu_to_numanode( short * const cpu_to_numanode, const int ncpus ) {
 
 int get_cpu_to_numanode( short * const cpu_to_numanode, const int ncpus ) {
 
-	int nnodes;
-	int stop = 0;
+	int current_node;
+	const int numfields = (ncpus + 31) / 32;  // Number of fields in the files with the masks.
 
-  nnodes=0;
-    // Clear the CPU to node list.
+	uint32_t masks_read[(__CPU_SETSIZE+31)/32];
+
+#ifdef DEBUG
+	printf( "get_cpu_to_numanode: Check whether the /sys/devices/system/node/node*/cpumap files have %d fields\n", numfields );
+#endif
+
+	// Clear the CPU to node list.
     for ( int cpu = 0; cpu < ncpus; cpu++ ) cpu_to_numanode[cpu] = -1;
 
     // Now look in a number of files with the CPUs for each NUMA node
-    nnodes = 0;
+    current_node = 0;
 
     do {
 
+    	int cpu;
     	char fname[45];
         FILE *fp;
 
-        sprintf( fname, "/sys/devices/system/node/node%d/cpumap", nnodes );
+        sprintf( fname, "/sys/devices/system/node/node%d/cpumap", current_node );
 
         if ( ( fp = fopen( fname, "r" ) ) == NULL ) break;   // No more NUMA nodes
+
         // Format of the file: 00000000,00000000,00000000,ffff0000,00000000,00000000,00000000,ffff0000
+        for ( int t1 = numfields -  1; t1 >= 0; t1-- ) {
+        	if ( fscanf( fp, "%x", masks_read + t1 ) != 1 ) {
+        		fprintf( stderr, "Failed to process %s\n", fname );
+        		exit( 1 );
+        	}
+        	if ( t1 > 0 ) fgetc( fp );  // Skip over the comma.
+        }  // End for-loop for reading the cpumap file.
 
+        fclose( fp );
+
+        // Now process the information just read.
+        cpu = 0;
+        for ( int t1 = 0; t1 < numfields; t1++ ) {
+        	for ( int t2 = 0; t2 < min( 32, ncpus - 32*t1 ); t2++ ) {
+        		// At this point cpu = 32*t1 + t2.
+                if ( masks_read[t1] & (unsigned int) 1 ) cpu_to_numanode[cpu] = current_node;
+                masks_read[t1] >>= 1;
+        		cpu++;
+        	}
+        }
+
+        current_node++;
 
     }
-    while ( ! stop );
+    while ( 1 ); // We get out of the loop with a break statement when no files can be read anymore.
+                 // Not the cleanest coding style though.
 
-  for (node=0;node < MAX_NUMA_NODES;node++) {
-    char fname[40];
-    FILE *fp;
-    unsigned long cpumask;
-    sprintf(fname,"/sys/devices/system/node/node%d/cpumap",node);
-    if ((fp=fopen(fname,"r")) == NULL) break;   /* no more NUMA nodes */
-    nnodes=node+1;
-    if (fscanf(fp,"%lx",&cpumask) == 1) {
-      /* Find the CPU bits set for this NUMA node. */
-      for (cpu=0;cpu < maxcpu;cpu++) {
-        if (cpumask == 0) break;                /* no more CPUs */
-        if (cpumask & 1) cpu_to_node[cpu] = node;
-        cpumask = cpumask >> 1;
-      }
-    }
-    fclose(fp);
-  }
-
-  return nnodes;
+    return current_node;  // This is also the number of nodes read.
 
 }
 
@@ -270,19 +299,90 @@ void numamask_to_ASCII( char * const ascii_mask, const short * const numamask, c
 
 //******************************************************************************
 //
-// get_args( argc, argv, mpi_myrank )
+// numamask_to_range( char *rangemask, short *numamask, int ncpus )
 //
-// Prints help information and exits.
+// Input arguments:
+//  * char * rangemask: pointer to a string area sufficiently large to store
+//    ncpus + 1 characters
+//  * short *numamask: Pointer to the mask in NUMAMASK format
+//  * int ncpus: The number of cpus
+//
+
+void numamask_to_range( char * const rangemask, const short * const numamask, const int ncpus ) {
+
+	int start = -1;
+	int output = 0;  // 0 as long as we have not written anything to rangemask.
+	char number[2*IWIDTH(__CPU_SETSIZE)+2];  // Space enough for number-number.
+    const int loop_limit = min( ncpus, __CPU_SETSIZE );
+
+	rangemask[0] = '\0';
+
+	for ( int cpu = 0; cpu <= loop_limit; cpu++ ) { // One iteration more than the number of CPUs to close.
+
+		if ( ( cpu == loop_limit ) || ( numamask[cpu] < 0 ) ) {
+
+			if ( start >= 0 ) { // We've isolated a new range ending at the previous cpu.
+
+				if ( output ) strcat( rangemask, ", " );
+				else          output = 1;
+
+				if ( start == (cpu - 1) ) {
+					// Just a single core in the range
+                    sprintf( number, "%d", start );
+				} else {
+					// True range from start to cpu-1
+					sprintf( number, "%d-%d", start, cpu - 1 );
+				}
+
+				strcat( rangemask, number );
+				start = -1;
+
+			}
+
+		} else {
+
+			if ( start < 0 ) start = cpu;
+
+		}
+
+	}
+
+}
+
+
+//******************************************************************************
+//
+// get_args( argc, argv, mpi_myrank, *option_label, *wait_time,
+//           *show_numamask, *show_rangemask )
+//
+// Gets the input arguments.
+//
+// Arguments:
+//  * argc: Argument count from the main function
+//  * argv: Argument values from the main function
+//  * mpi_myrank: MPI rank to ensure that help is printed only once.
+//    Since in a heterogeneous program some program arguments may only
+//    be given for the second instance, we cannot avoid that other error
+//    messages will be printed once for each MPI rank in the job component.
+//  * option_label: Space of at least LABELLENGTH+1 bytes to receive the
+//    (possibly truncated) label from the -l argument. Empty string if no
+//    label is specified.
+//  * wait_time: Argument of the -w flag, or 0.
+//  * show_numamask: On return nonzero if -a is specified, zero otherwise.
+//  * show_rangemask: On return nonzero if -n is specified, zero otherwise.
 //
 
 void get_args( int argc, char **argv, int mpi_myrank,
-		       char *option_label, long *wait_time ) {
+		       char *option_label, long *wait_time,
+			   unsigned int *show_numamask, unsigned int *show_rangemask ) {
 
 	char *exe_name;
 
 	// Make sure we always return initialised variables, whatever happens.
 	option_label[0] = '\0';
 	*wait_time = 0L;
+	*show_numamask = 0;
+	*show_rangemask = 0;
 
 	// Remove the program name
 	exe_name = *argv++;
@@ -293,6 +393,10 @@ void get_args( int argc, char **argv, int mpi_myrank,
 		if ( strcmp( *argv, "-h") == 0 ) {
 			if ( mpi_myrank == 0 ) print_help();
 			exit( EXIT_SUCCESS );
+		} else if ( strcmp( *argv, "-n") == 0 ) {
+			*show_numamask = 1;
+		} else if ( strcmp( *argv, "-r") == 0 ) {
+			*show_rangemask = 1;
 		} else if ( strcmp( *argv, "-l") == 0 ) {
 			if ( argc == 0 ) {  // No arguments left, so we have a problem.
 				fprintf( stderr, "%s: No label found for -l.\n", exe_name );
@@ -341,7 +445,8 @@ void get_args( int argc, char **argv, int mpi_myrank,
 //
 
 
-int data_gather_print( const t_configInfo *configInfo, const char *option_label ) {
+int data_gather_print( const t_configInfo *configInfo, const char *option_label,
+		               unsigned int show_numamask, unsigned int show_rangemask ) {
 
     int error;
 	int label_length;
@@ -415,7 +520,8 @@ int data_gather_print( const t_configInfo *configInfo, const char *option_label 
     	const char *empty_string = "";
     	const char *sep_colon = ": ";
 
-    	char asciimask[__CPU_SETSIZE+1];
+    	char numamask[__CPU_SETSIZE+1];
+    	char rangemask[(IWIDTH(__CPU_SETSIZE)+2)*__CPU_SETSIZE];
 
         const char *label_sep = ( ( max_label_length > 0 ) ? sep_colon : empty_string );
 
@@ -425,13 +531,24 @@ int data_gather_print( const t_configInfo *configInfo, const char *option_label 
             buf_rankData->threadData = &(buf_rankData->firstthread); // Because the pointer from the other process doesn't make sense.
 
             for ( int c2 = 0; c2 < buf_rankData->openmp_numthreads; c2++ ) {
-            	numamask_to_ASCII( asciimask, buf_rankData->threadData[c2].numamask, buf_rankData->ncpus );
-            	printf( "++ %-*s%sMPI rank %3d/%-3d OpenMP thread %3d/%-3d on cpu %3d/%-3d of %s mask %s\n",
+            	printf( "++ %-*s%sMPI rank %3d/%-3d OpenMP thread %3d/%-3d on cpu %3d/%-3d of %s",
             			max_label_length, buf_rankData->label, label_sep,
 						buf_rankData->mpi_myrank, configInfo->mpi_numranks,
 						c2, buf_rankData->openmp_numthreads,
-						buf_rankData->threadData[c2].corenum, buf_rankData->ncpus, buf_rankData->hostname,
-						asciimask );
+						buf_rankData->threadData[c2].corenum, buf_rankData->ncpus, buf_rankData->hostname );
+            	if ( show_numamask || show_rangemask ) {
+            		printf( " mask " );
+            		if ( show_numamask ) {
+            			numamask_to_ASCII( numamask, buf_rankData->threadData[c2].numamask, buf_rankData->ncpus );
+            			printf( "%s ", numamask );
+            		}
+                    if ( show_rangemask ) {
+                    	numamask_to_range( rangemask, buf_rankData->threadData[c2].numamask, buf_rankData->ncpus );
+            			printf( "%s", rangemask );
+                    }
+            	}
+            	printf(  "\n" );
+
             }  // end for ( int c2...
         }  // end for ( int c1...
 
@@ -539,9 +656,11 @@ and OpenMP threads per process.
 
 int main( int argc, char *argv[] )
 {
-	char option_label[LABELLENGTH+1] = "";   // Space for the label (if used), initialize with empty string.
+	char option_label[LABELLENGTH+1];   // Space for the label (if used).
 
 	long wait_time, max_wait_time;
+	unsigned int show_numamask, in_show_numamask;
+	unsigned int show_rangemask, in_show_rangemask;
 
 	t_configInfo configInfo;
 
@@ -574,12 +693,14 @@ int main( int argc, char *argv[] )
     // Read the command line arguments
     //
     // option_label[0] = '\0'; // Make sure it is always initialised to at least the empty string.
-    get_args( argc, argv, configInfo.mpi_myrank, option_label, &wait_time );
+    get_args( argc, argv, configInfo.mpi_myrank, option_label, &wait_time, &in_show_numamask, &in_show_rangemask );
 
     // Compute the maximum wait time: In a heterogenous situation, one may have given a different load
     // for each process set yet all tasks must be able to decide if we should put load or not. In fact.
     // In the implementation we chose have the same length of load for every MPI rank.
-    MPI_Allreduce( &wait_time, &max_wait_time, 1, MPI_LONG, MPI_MAX, MPI_COMM_WORLD );
+    MPI_Allreduce( &wait_time,         &max_wait_time,  1, MPI_LONG,     MPI_MAX, MPI_COMM_WORLD );
+    MPI_Allreduce( &in_show_numamask,  &show_numamask,  1, MPI_UNSIGNED, MPI_MAX, MPI_COMM_WORLD );
+    MPI_Allreduce( &in_show_rangemask, &show_rangemask, 1, MPI_UNSIGNED, MPI_MAX, MPI_COMM_WORLD );
 
     // Print some information on the data just computed.
     if ( configInfo.mpi_myrank == 0 ) {
@@ -604,7 +725,7 @@ int main( int argc, char *argv[] )
     }
 
     // Print detailed info on the current core for processes and threads.
-    data_gather_print( &configInfo, option_label );
+    data_gather_print( &configInfo, option_label, show_numamask, show_rangemask );
 
     // If simulating some load was requested, simulate some load and print the configuration again.
 
@@ -616,7 +737,7 @@ int main( int argc, char *argv[] )
     	if ( ( error == 0 ) && ( configInfo.mpi_myrank == 0 ) )
     		printf( "Approximation for the surface of the Mandelbroot fractal: %16.14lg\n\n", mandel_surface );
 
-    	data_gather_print( &configInfo, option_label );
+    	data_gather_print( &configInfo, option_label, show_numamask, show_rangemask );
 
     }
 
