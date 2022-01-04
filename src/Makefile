@@ -25,7 +25,7 @@ LIBS    ?= -lnuma
 
 examples : bindir \
 	       ../bin/serial_check ../bin/omp_check ../bin/mpi_check ../bin/mpi_omp_check \
-		   ../bin/omp_hello ../bin/mpi_hello ../bin/mpi_omp_hello \
+		   ../bin/serial_hello ../bin/omp_hello ../bin/mpi_hello ../bin/mpi_omp_hello \
 		   ../bin/eat_mem   ../bin/eat_cpu   ../bin/eat_disk
 
 clean : 
@@ -39,16 +39,20 @@ bindir :
 # separate source for each for increased readability.
 #
 
+serial_hello : ../bin/serial_hello
+../bin/serial_hello : serial_hello.c Makefile
+	$(CC) $(CFLAGS) $(OMPFLAG) $< -o $@
+
 omp_hello : ../bin/omp_hello
-../bin/omp_hello : omp_hello.c
+../bin/omp_hello : omp_hello.c Makefile
 	$(CC) $(CFLAGS) $(OMPFLAG) $< -o $@
 
 mpi_hello : ../bin/mpi_hello
-../bin/mpi_hello : mpi_hello.c
+../bin/mpi_hello : mpi_hello.c Makefile
 	$(MPICC) $(CFLAGS) $< -o $@
 
 mpi_omp_hello : ../bin/mpi_omp_hello
-../bin/mpi_omp_hello : mpi_omp_hello.c
+../bin/mpi_omp_hello : mpi_omp_hello.c Makefile
 	$(MPICC) $(CFLAGS) $(OMPFLAG) $< -o $@
 
 #
@@ -77,13 +81,13 @@ mpi_omp__check : ../bin/mpi_omp__check
 #
 
 eat_mem : ../bin/eat_mem
-../bin/eat_mem : eat_mem.c
+../bin/eat_mem : eat_mem.c Makefile
 	$(CC) $(CFLAGS) $< -o $@
 
 eat_cpu : ../bin/eat_cpu
-../bin/eat_cpu : eat_cpu.c
+../bin/eat_cpu : eat_cpu.c Makefile
 	$(CC) $(CFLAGS) $< -o $@
 
 eat_disk : ../bin/eat_disk
-../bin/eat_disk : eat_disk.c
+../bin/eat_disk : eat_disk.c Makefile
 	$(CC) $(CFLAGS) $< -o $@

@@ -3,7 +3,7 @@
 //
 // This program is used to demonstrate starting a OpenMP program.
 // It is essentially a hello world program, but with an added element that does
-// make the source code more difficult: Every thread prints information abou the
+// make the source code more difficult: Every thread prints information about the
 // core it runs on, and that information is printed in order of OpenMP thread number,
 // requiring quite a lot of synchronization.
 //
