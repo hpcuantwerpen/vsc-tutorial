@@ -1,29 +1,26 @@
 .\" Written by Kurt Lust, kurt.lust@uantwerpen.be.
-.TH man 1 "4 January 2022" "1.9" "mpi_omp_check (vsc-tutorial) command"
+.TH man 1 "4 January 2022" "1.9" "mpi_check (vsc-tutorial) command"
 
 .SH NAME
-mpi_omp_check \- Simple "Hello, World!"-style hybrid MPI/OpenMP program
+mpi_check \- Simple "Hello, World!"-style MPI program
 
 .SH DESCRIPTION
-\fBmpi_omp_check\fR is a simple "Hello, World!"-style hybrid MPI/OpenMP program.
-It is a more sophisticated variant of \fBmpi_omp_hello\fR that can print a lot
-more information.
+\fBmpi_check\fR is a simple "Hello, World!"-style MPI program
+that can print some information about where it is running.
 
-Each thread prints a line with its MPI rank, OpenMP thread number, the core
-number and the node name the thread is running on.
-The output is sorted according to the MPI rank and OpenMP thread number
-within each MPI rank. Additional output specific for this version is
-the option to label each call to \fBmpi_omp_check\fR which is great for
+Each rank prints a line with its MPI rank, the core
+number and the node name it is running on.
+The output is sorted according to the MPI rank. One can also label each call to \fBmpi_check\fR
+which is great for
 distinguishing between the output of different components of a
-heterogeneous job, and information on the pinning of each thread.
+heterogeneous job, and information on the pinning of each process.
 
-The number of threads per rank can be set through the OMP_NUM_THREADS
-environment variable, and the MPI processes should be started using
+The MPI processes should be started using
 \fBsrun\fR or \fBmpirun\fR with the appropriate options for your environment.
 When started without \fBsrun\fR, the behaviour will depend on the configuration
 of the system. On some systems it may fail to run and on other systems
 it will just run a single instance of the program, in which case
-it would actually show what a regular OpenMP program would do.
+it would actually show what a regular serial program would do.
 
 .SH OPTIONS
 .TP
@@ -42,7 +39,7 @@ and see what is happening. At the end it will print the
 allocation of the threads again as the OS may have improved
 the spreading of the threads over the cores.
 If different values are given for different parts in a
-heterogeneous job, the largest will be used and applied to all
+Slurm heterogeneous job, the largest will be used and applied to all
 components of the heterogeneous job.
 .TP
 \fB\-n\fR
@@ -68,39 +65,22 @@ shows many features of this program:
 .EX
 #! /bin/bash
 #SBATCH --time=2:00
-#SBATCH --ntasks=4 --cpus-per-task=4
-#SBATCH hetjob
-#SBATCH --ntasks=2 --cpus-per-task=8
+#SBATCH --ntasks=8 --cpus-per-task=1
 
-srun --ntasks=4 --cpus-per-task=4 mpi_omp_check -l exe1 -w 15 -n -r : \\
-     --ntasks=2 --cpus-per-task=8 mpi_omp_check -l exe2
+srun mpi_check -l test -w 15 -n -r
 .EE
 
-This script simulates a heterogeneous job running in a single MPI_COM_WORLD
-universum with an instance of \fBmpi_omp_check\fR labeled exe1 running in
-4 MPI ranks with 4 threads each and a second instance labeled exe2 running
-in 2 MPI ranks with 8 threads each. It will also simulate some load during
+This script simulates an MPI job running \fBmpi_check\fR labeled exe1 on
+8 cores.
+It will also simulate some load during
 approximately 15 seconds, and before and after that print the distribution
 of threads including the affinity in the two supported formats.
 You may have to add the appropriate \fBmodule load\fR commands to the script
-to ensure that \fBmpi_omp_check\fR works, and the script also assumes that it
+to ensure that \fBmpi_check\fR works, and the script also assumes that it
 is in the search path for executables.
 
-However, on may MPI implementations, the program can even be run as a regular
-single multithreaded executable without using \fBsrun\fR. E.g., the following
-job script would run \fBmpi_omp_check\fR in shared memory mode on 8 cores:
-
-.EX
-#! /bin/bash
-#SBATCH --time=0:20
-#SBATCH --ntasks=1 --cpus-per-task=8
-
-export OMP_PROC_BIND=true
-mpi_omp_check -l test -w 15 -n -r
-.EE
-
 .SH SEE ALSO
-serial_hello(1), omp_hello(1), mpi_hello(1), mpi_omp_hello(1), serial_check(1), omp_check(1), mpi_check(1), vsc-tutorial(1)
+serial_hello(1), omp_hello(1), mpi_hello(1), mpi_omp_hello(1), serial_check(1), omp_check(1), mpi_omp_check(1), vsc-tutorial(1)
 
 .SH AUTHOR
 Kurt Lust (Kurt.Lust@uantwerpen.be)

@@ -1,5 +1,5 @@
 .\" Written by Kurt Lust, kurt.lust@uantwerpen.be.
-.TH man 1 "13 July 2021" "1.2" "vsc-tutorial overview"
+.TH man 1 "4 January 2022" "1.9" "vsc-tutorial overview"
 
 .SH NAME
 vsc-tutorial \- Various example programs for the hands-on tutorials at
@@ -10,6 +10,10 @@ vsc-tutorial contains various small programs that are used in the HPC hands-on
 tutorials at UAntwerp, e.g., to start various types of programs.
 
 Commands:
+.TP
+\fBserial_hello\fR
+Simple program to test starting a (group of) serial program(s)
+
 .TP
 \fBomp_hello\fR
 Simple program to test starting an OpenMP program
@@ -23,7 +27,25 @@ Simple program to test starting a MPI program
 Simple program to test starting a hybrid MPI/OpenMP program
 
 .TP
-\fBhybrid_hello\fR
+\fBserial_check\fR
+A variant of serial_hello, with
+options to put some load on the allocated CPU and to print process affinity
+in two different formats.
+
+.TP
+\fBomp_check\fR
+A variant of omp_hello, with
+options to put some load on the allocated CPUs and to print thread affinity
+in two different formats.
+
+.TP
+\fBmpi_check\fR
+A variant of mpi_hello, suitable to test heterogeneous jobs and with
+options to put some load on the allocated CPUs and to print process affinity
+in two different formats.
+
+.TP
+\fBmpi_omp_check\fR
 A variant of mpi_omp_hello, suitable to test heterogeneous jobs and with
 options to put some load on the allocated CPUs and to print thread affinity
 in two different formats.
@@ -44,7 +66,7 @@ Single-threaded program that consumes a given amount of memory to test
 memory allocations
 
 .SH SEE ALSO
-omp_hello(1), mpi_hello(1), mpi_omp_hello(1), hybrid_hello(1), eat_mem(1), eat_cpu(1), eat_disk(1)
+omp_hello(1), mpi_hello(1), mpi_omp_hello(1), mpi_omp_check(1), eat_mem(1), eat_cpu(1), eat_disk(1)
 
 .SH AUTHOR
 Kurt Lust (Kurt.Lust@uantwerpen.be)

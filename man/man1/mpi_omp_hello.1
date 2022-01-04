@@ -1,11 +1,11 @@
 .\" Written by Kurt Lust, kurt.lust@uantwerpen.be.
-.TH man 1 "13 July 2021" "1.2" "mpi_omp_hello (vsc-tutorial) command"
+.TH man 1 "4 January 2022" "1.9" "mpi_omp_hello (vsc-tutorial) command"
 
 .SH NAME
 mpi_omp_hello \- Simple "Hello, World!"-style hybrid MPI/OpenMP program
 
 .SH DESCRIPTION
-mpi_omp_hello is a simple "Hello, World!"-style hybrid MPI/OpenMP program.
+\fBmpi_omp_hello\fR is a simple "Hello, World!"-style hybrid MPI/OpenMP program.
 Each thread prints a line with its MPI rank, OpenMP thread number, the core
 number and the node name the thread is running on.
 The output is sorted according to the MPI rank and OpenMP thread number
@@ -16,7 +16,7 @@ environment variable, and the MPI processes should be started using
 mpirun with the appropriate options for your environment.
 
 .SH SEE ALSO
-omp_hello(1), mpi_hello(1), hybrid_hello(1), vsc-tutorial(1)
+serial_hello(1), omp_hello(1), mpi_hello(1), serial_check(1), omp_check(1), mpi_check(1), mpi_omp_check(1), vsc-tutorial(1)
 
 .SH AUTHOR
 Kurt Lust (Kurt.Lust@uantwerpen.be)

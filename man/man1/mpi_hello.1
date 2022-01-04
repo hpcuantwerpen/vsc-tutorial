@@ -1,18 +1,18 @@
 .\" Written by Kurt Lust, kurt.lust@uantwerpen.be.
-.TH man 1 "13 July 2021" "1.2" "mpi_hello (vsc-tutorial) command"
+.TH man 1 "4 January 2022" "1.9" "mpi_hello (vsc-tutorial) command"
 
 .SH NAME
 mpi_hello \- Simple "Hello, World!"-style MPI program
 
 .SH DESCRIPTION
-mpi_hello is a simple "Hello, World!"-style MPI program. Each thread
+\fBmpi_hello\fR is a simple "Hello, World!"-style MPI program. Each thread
 prints a line with its MPI rank, the core number and the node name
 it is running on. The output is sorted according to the MPI rank.
 
 The program is started as any standard MPI program.
 
 .SH SEE ALSO
-omp_hello(1), mpi_omp_hello(1), hybrid_hello(1), vsc-tutorial(1)
+serial_hello(1), omp_hello(1), mpi_omp_hello(1), serial_check(1), omp_check(1), mpi_check(1), mpi_omp_check(1), vsc-tutorial(1)
 
 .SH AUTHOR
 Kurt Lust (Kurt.Lust@uantwerpen.be)
