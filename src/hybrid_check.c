@@ -23,9 +23,14 @@
 #ifdef HAVE_NUMALIB
 #include <numa.h>
 #endif
+#include <libgen.h>
 
+#ifdef WITH_MPI
 #include <mpi.h>
+#endif
+#ifdef WITH_OMP
 #include <omp.h>
+#endif
 
 #define max(a,b)  ( (a) < (b) ? (b) : (a) )
 #define min(a,b)  ( (a) > (b) ? (b) : (a) )
@@ -52,7 +57,7 @@ typedef struct {
 
 typedef struct {
 	t_threadData *threadData;                // Will point to an array containing the OS core number for each OpenMP thread
-                                             // We'll do a dirty trick and actually start that array at the firstcore field
+                                             // We'll do a dirty trick and actually start that array at the firstthread field
                                              // when we allocate memory.
     int          mpi_myrank;                 // MPI rank of the current process
     int          openmp_numthreads;          // Number of threads in the current MPI process
@@ -78,23 +83,51 @@ typedef struct {
 // Prints help information.
 //
 
-void print_help() {
+void print_help( const char *exe_name ) {
 
 	fprintf( stderr,
-        "hybrid_hello\n"
-		"\n"
+        "%s\n"
+		"\n",
+        exe_name
+	);
+#if defined( WITH_OMP ) && defined ( WITH_MPI )
+	fprintf( stderr,
 		"This program prints out useful information on the distribution of processes\n"
 		"and threads in a hybrid MPI/OpenMP application.\n"
 		"It also provides information on where each thread is running and how threads\n"
 		"are bound to CPUs. It also supports MPMD startup, though you would use the\n"
 		"same executable for each part of the heterogeneous job and instead use a\n"
 		"different label for each part.\n"
-			"\n"
+	);
+#elif defined( WITH_OMP )
+	fprintf( stderr,
+		"This program prints out useful information on the distribution of threads\n"
+		"in an OpenMP application.\n"
+		"It also provides information on where each thread is running and how threads\n"
+		"are bound to CPUs.\n"
+	);
+#elif defined( WITH_MPI )
+	fprintf( stderr,
+		"This program prints out useful information on the distribution of processes\n"
+		"in an MPI application.\n"
+		"It also provides information on where each process is running and how it\n"
+		"is bound to CPUs. It also supports MPMD startup, though you would use the\n"
+		"same executable for each part of the heterogeneous job and instead use a\n"
+		"different label for each part.\n"
+	);
+#else
+	fprintf( stderr,
+		"This program prints out useful information on the core on which a serial\n"
+		"process is running.\n"
+	);
+#endif
+	fprintf( stderr,
+		"\n"
 		"Flags accepted:\n"
 		" -h         produce help information and exit\n"
 		" -l <label> specify a label to use in the output for this process\n"
-		"            This simulates using different executable names in a\n"
-		"            heterogeneous job.\n"
+		"            This can be used to simulate using different executable names\n"
+		"            in some scenarios.\n"
 		" -w <time>  keeps all allocated CPUs busy for approximately <time> seconds\n"
 		"            computing the surface of the Mandelbrot fractal with a naive\n"
 		"            Monte Carlo algorithm so that a user can logon to the nodes\n"
@@ -112,10 +145,15 @@ void print_help() {
 		" -r         Numeric representation of the affinity mask as a series of ranges\n"
 		"            of cores.\n"
 		"\n"
+	);
+#ifdef WITH_MPI
+	fprintf( stderr,
 		"In a heterogeneous job, the -w, -n and -r options need to be specified for\n"
         "only one of the components of the job but will apply to all components.\n"
         "\n"
     );
+#endif
+	fflush( stderr );
 
 }
 
@@ -197,7 +235,7 @@ int get_cpu_to_numanode( short * const cpu_to_numanode, const int ncpus ) {
 	uint32_t masks_read[(__CPU_SETSIZE+31)/32];
 
 #ifdef DEBUG
-	printf( "get_cpu_to_numanode: Check whether the /sys/devices/system/node/node*/cpumap files have %d fields\n", numfields );
+	printf( "get_cpu_to_numanode: Check whether the /sys/devices/system/node/node*/cpumap files have %d fields\n", numfields ); fflush( stdout );
 #endif
 
 	// Clear the CPU to node list.
@@ -379,19 +417,22 @@ void get_args( int argc, char **argv, int mpi_myrank,
 	char *exe_name;
 
 	// Make sure we always return initialised variables, whatever happens.
-	option_label[0] = '\0';
+	// option_label[0] = '\0';
+	// Default label is the name of the executable derived from argv[0].
+	strncpy( option_label, basename( argv[0] ), LABELLENGTH );
+	option_label[LABELLENGTH] = '\0';  // Just to be very sure that the string is null-terminated.
 	*wait_time = 0L;
 	*show_numamask = 0;
 	*show_rangemask = 0;
 
 	// Remove the program name
-	exe_name = *argv++;
+	exe_name = basename( *argv++ );
 	argc--;
 
 	while ( argc-- ) {
 
 		if ( strcmp( *argv, "-h") == 0 ) {
-			if ( mpi_myrank == 0 ) print_help();
+			if ( mpi_myrank == 0 ) print_help( exe_name );
 			exit( EXIT_SUCCESS );
 		} else if ( strcmp( *argv, "-n") == 0 ) {
 			*show_numamask = 1;
@@ -448,6 +489,8 @@ void get_args( int argc, char **argv, int mpi_myrank,
 int data_gather_print( const t_configInfo *configInfo, const char *option_label,
 		               unsigned int show_numamask, unsigned int show_rangemask ) {
 
+	const int mssgID = 1;
+
     int error;
 	int label_length;
 	int max_label_length = 0;                // Make sure it has a reasonable initialization on all MPI ranks
@@ -459,23 +502,31 @@ int data_gather_print( const t_configInfo *configInfo, const char *option_label,
     short cpu_to_numanode[__CPU_SETSIZE];
     int nnumanodes;
 
+#ifdef WITH_MPI
     MPI_Request request;
     MPI_Status status;
+#endif
 
     // Compute the maximum length of the labels, and take into account that in a heterogeneous
     // job some parts may not be labeled.
     // Only MPI rank 0 needs max_label_length.
     label_length = strlen( option_label ); // We can in fact always use strlen as option_label has been initialised to the empty string.
+#ifdef WITH_MPI
     MPI_Reduce( &label_length, &max_label_length, 1, MPI_INT, MPI_MAX, 0, MPI_COMM_WORLD );
+#else
+    max_label_length = label_length;
+#endif
 
     // Create the t_rankData data structures.
 
+    // Sending buffer: We know how many OpenMP threads we have so we can size correctly.
     my_rankData_size = sizeof( t_rankData ) + (configInfo->openmp_numthreads - 1) * sizeof( t_threadData );
     my_rankData = (t_rankData *) malloc( my_rankData_size );
     if ( my_rankData == NULL ) { fprintf( stderr, "ERROR: Memory allocation for my_rankData failed.\n" ); return 1; };
     my_rankData->threadData = &(my_rankData->firstthread);
 
     if ( configInfo->mpi_myrank == 0 ) {
+    	// Receiving buffer: We may get messages from ranks with more threads to size for the maximum that we can get.
         buf_rankData_size = sizeof( t_rankData ) + (configInfo->max_openmp_numthreads - 1) * sizeof( t_threadData );
         buf_rankData = (t_rankData *) malloc( buf_rankData_size );
         if ( buf_rankData == NULL ) { fprintf( stderr, "ERROR: Memory allocation for buf_rankData failed.\n" ); return 2; };
@@ -492,12 +543,18 @@ int data_gather_print( const t_configInfo *configInfo, const char *option_label,
     gethostname( my_rankData->hostname, (size_t) (HOSTNAMELENGTH+1) );
     strcpy( my_rankData->label, option_label );
     nnumanodes = get_cpu_to_numanode( cpu_to_numanode, my_rankData->ncpus );
+#ifdef WITH_OMP
 #pragma omp parallel
+#endif
     {
         int openmp_myid;
 
         /* Get OpenMP information. */
+#ifdef WITH_OMP
         openmp_myid = omp_get_thread_num();
+#else
+        openmp_myid = 0;
+#endif
         my_rankData->threadData[openmp_myid].corenum = (long) sched_getcpu();
         if ( sched_getaffinity( 0, sizeof( cpu_set_t ), &my_rankData->threadData[openmp_myid].mask ) == -1 )
             perror( "data_gather_print" );
@@ -513,7 +570,17 @@ int data_gather_print( const t_configInfo *configInfo, const char *option_label,
     //
 
     // Send data to process with rank 0.
-    error = MPI_Isend( my_rankData, my_rankData_size, MPI_BYTE, 0, 0, MPI_COMM_WORLD, &request );
+#if defined( DEBUG ) && defined( WITH_MPI )
+    printf( "DEBUG: Rank %d: Sending a message of %d bytes, claiming %d threads, %d CPUs, host %s.\n",
+    		configInfo->mpi_myrank, my_rankData_size, my_rankData->openmp_numthreads, my_rankData->ncpus, my_rankData->hostname );
+    fflush( stdout );
+#endif
+#ifdef WITH_MPI
+    error = MPI_Isend( my_rankData, my_rankData_size, MPI_BYTE, 0, mssgID, MPI_COMM_WORLD, &request );
+#endif
+#if defined( DEBUG ) && defined( WITH_MPI )
+    MPI_Barrier( MPI_COMM_WORLD );
+#endif
 
     if ( configInfo->mpi_myrank == 0 ) {
 
@@ -527,15 +594,46 @@ int data_gather_print( const t_configInfo *configInfo, const char *option_label,
 
         for ( int c1 = 0; c1 < configInfo->mpi_numranks; c1++ ) {
 
-            error = MPI_Recv( buf_rankData, buf_rankData_size, MPI_BYTE, c1, 0, MPI_COMM_WORLD, &status );
+#ifdef WITH_MPI
+            error = MPI_Recv( buf_rankData, buf_rankData_size, MPI_BYTE, c1, mssgID, MPI_COMM_WORLD, &status );
+#else
+            memcpy( buf_rankData, my_rankData, my_rankData_size );
+#endif
             buf_rankData->threadData = &(buf_rankData->firstthread); // Because the pointer from the other process doesn't make sense.
+#if defined( DEBUG ) && defined( WITH_MPI )
+    printf( "DEBUG: Rank 0: Received a message of %d bytes from rank %d, claiming %d threads, %d CPUs, host %s.\n",
+    		my_rankData_size, c1, buf_rankData->openmp_numthreads, buf_rankData->ncpus, buf_rankData->hostname );
+    fflush( stdout );
+#endif
 
-            for ( int c2 = 0; c2 < buf_rankData->openmp_numthreads; c2++ ) {
-            	printf( "++ %-*s%sMPI rank %3d/%-3d OpenMP thread %3d/%-3d on cpu %3d/%-3d of %s",
+            // The min function should not be needed, but it prevents overrunning memory in case of a corrupt
+            // message so also helps to avoid segmentation violations.
+            for ( int c2 = 0; c2 < min( buf_rankData->openmp_numthreads, configInfo->max_openmp_numthreads ); c2++ ) {
+#if defined( WITH_OMP ) && defined( WITH_MPI)
+            	// Hybrid case
+            	printf( "++ %-*s%sMPI rank %3d/%-3d OpenMP thread %3d/%-3d on cpu %3ld/%-3d of %s",
             			max_label_length, buf_rankData->label, label_sep,
 						buf_rankData->mpi_myrank, configInfo->mpi_numranks,
 						c2, buf_rankData->openmp_numthreads,
 						buf_rankData->threadData[c2].corenum, buf_rankData->ncpus, buf_rankData->hostname );
+#elif defined( WITH_OMP)
+            	// OpenMP case
+            	printf( "++ %-*s%sOpenMP thread %3d/%-3d on cpu %3ld/%-3d of %s",
+            			max_label_length, buf_rankData->label, label_sep,
+						c2, buf_rankData->openmp_numthreads,
+						buf_rankData->threadData[c2].corenum, buf_rankData->ncpus, buf_rankData->hostname );
+#elif defined( WITH_MPI)
+            	// MPI case
+            	printf( "++ %-*s%sMPI rank %3d/%-3d on cpu %3ld/%-3d of %s",
+            			max_label_length, buf_rankData->label, label_sep,
+						buf_rankData->mpi_myrank, configInfo->mpi_numranks,
+						buf_rankData->threadData[c2].corenum, buf_rankData->ncpus, buf_rankData->hostname );
+#else
+            	// Serial case
+            	printf( "++ %-*s%srunning on cpu %3ld/%-3d of %s",
+            			max_label_length, buf_rankData->label, label_sep,
+						buf_rankData->threadData[c2].corenum, buf_rankData->ncpus, buf_rankData->hostname );
+#endif
             	if ( show_numamask || show_rangemask ) {
             		printf( " mask " );
             		if ( show_numamask ) {
@@ -555,6 +653,11 @@ int data_gather_print( const t_configInfo *configInfo, const char *option_label,
         printf( "\n" );
 
     } // end if ( mpi_myrank == 0 )
+
+    // Make sure all data is send before clearing the buffer.
+#ifdef WITH_MPI
+    MPI_Wait( &request, &status );
+#endif
 
     // Free memory allocated with malloc
     free( my_rankData );
@@ -589,15 +692,21 @@ int mandelSurface( const t_configInfo * const configInfo, const long wait_time, 
 	}
 
 	// Start synchronized
+#ifdef WITH_MPI
     MPI_Barrier( MPI_COMM_WORLD );
+#endif
 
     // Get the start clock
     start = clock();
     current = start;
 
-    while ( (current - start) <  wait_time * CLOCKS_PER_SEC ) {
+    // clock returns an estimate for the total time for all threads which is why we have to use
+    // the factor configInfo->openmp_numthreads.
+    while ( (current - start) <  (wait_time * CLOCKS_PER_SEC * (long) configInfo->openmp_numthreads) ) {
 
+#ifdef WITH_OMP
 #pragma omp parallel for reduction(+:samples,in_fractal)
+#endif
         for ( long t1 = 0 ; t1 < (long) configInfo->openmp_numthreads * SAMPLE_BLOCK; t1++ ) {
 
         	 double c_r, c_i;
@@ -605,8 +714,13 @@ int mandelSurface( const t_configInfo * const configInfo, const long wait_time, 
         	 double z_rs, z_is;
         	 int    cycle;
 
+#ifdef WITH_OMP
              c_r = -2.25 + 3.0 * erand48( randState[omp_get_thread_num()] );
              c_i = -0.75 + 1.5 * erand48( randState[omp_get_thread_num()] );
+#else
+             c_r = -2.25 + 3.0 * erand48( randState[0] );
+             c_i = -0.75 + 1.5 * erand48( randState[0] );
+#endif
 
              // First iteration starts with z=0
              z_r   = c_r;
@@ -632,7 +746,7 @@ int mandelSurface( const t_configInfo * const configInfo, const long wait_time, 
 
         }  // End for ( long t1 = 0; ...)
 
-    current = clock();
+        current = clock();
 
     }  // End while ( (current - start) ...
 
@@ -641,9 +755,16 @@ int mandelSurface( const t_configInfo * const configInfo, const long wait_time, 
     long in[2], sum[2];
     in[0] = in_fractal;
     in[1] = samples;
+#ifdef WITH_MPI
     MPI_Allreduce( in, sum, 2, MPI_LONG, MPI_SUM, MPI_COMM_WORLD );
+#else
+    sum[0] = in[0];
+    sum[1] = in[1];
+#endif
 
     *mandel_surface = 3.0 * 1.5 * (double) sum[0] / (double) sum[1];
+
+    return 0;
 
 }
 
@@ -668,39 +789,63 @@ int main( int argc, char *argv[] )
     t_rankData *buf_rankData;                // Buffer to receive data from another process.
     int my_rankData_size, buf_rankData_size;
     int error;
+#ifdef WITH_MPI
     MPI_Request request;
     MPI_Status status;
+#endif
 
+#ifdef WITH_MPI
     MPI_Init( &argc, &argv );            // Standard way of initializing a MPI program.
+#endif
 
     //
     // Initializations
     //
 
     // Get basic info: Number of processes and the number of threads in this process
+#ifdef WITH_MPI
     MPI_Comm_size( MPI_COMM_WORLD, &configInfo.mpi_numranks );
     MPI_Comm_rank( MPI_COMM_WORLD, &configInfo.mpi_myrank );
+#else
+    configInfo.mpi_numranks = 1;
+    configInfo.mpi_myrank   = 0;
+#endif
 
+#ifdef WITH_OMP
 #pragma omp parallel shared( configInfo )   // The shared clause is not strictly needed as that variable will be shared by default.
     { if ( omp_get_thread_num() == 0 ) configInfo.openmp_numthreads = omp_get_num_threads(); } // Must be in a parallel session to get the proper number.
+#else
+    configInfo.openmp_numthreads = 1;
+#endif
 
     // We'll make sure that all fields of configInfo have valid values on all MPI ranks.
+#ifdef WITH_MPI
     MPI_Allreduce( &configInfo.openmp_numthreads, &configInfo.max_openmp_numthreads, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD );
     MPI_Allreduce( &configInfo.openmp_numthreads, &configInfo.min_openmp_numthreads, 1, MPI_INT, MPI_MIN, MPI_COMM_WORLD );
     MPI_Allreduce( &configInfo.openmp_numthreads, &configInfo.sum_openmp_numthreads, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD );
+#else
+    configInfo.max_openmp_numthreads = configInfo.openmp_numthreads;
+    configInfo.min_openmp_numthreads = configInfo.openmp_numthreads;
+    configInfo.sum_openmp_numthreads = configInfo.openmp_numthreads;
+#endif
 
     //
     // Read the command line arguments
     //
-    // option_label[0] = '\0'; // Make sure it is always initialised to at least the empty string.
     get_args( argc, argv, configInfo.mpi_myrank, option_label, &wait_time, &in_show_numamask, &in_show_rangemask );
 
-    // Compute the maximum wait time: In a heterogenous situation, one may have given a different load
+    // Compute the maximum wait time: In a heterogeneous situation, one may have given a different load
     // for each process set yet all tasks must be able to decide if we should put load or not. In fact.
-    // In the implementation we chose have the same length of load for every MPI rank.
+    // In the implementation we chose to have the same length of load for every MPI rank.
+#ifdef WITH_MPI
     MPI_Allreduce( &wait_time,         &max_wait_time,  1, MPI_LONG,     MPI_MAX, MPI_COMM_WORLD );
     MPI_Allreduce( &in_show_numamask,  &show_numamask,  1, MPI_UNSIGNED, MPI_MAX, MPI_COMM_WORLD );
     MPI_Allreduce( &in_show_rangemask, &show_rangemask, 1, MPI_UNSIGNED, MPI_MAX, MPI_COMM_WORLD );
+#else
+    max_wait_time  = wait_time;
+    show_numamask  = in_show_numamask;
+    show_rangemask = in_show_rangemask;
+#endif
 
     // Print some information on the data just computed.
     if ( configInfo.mpi_myrank == 0 ) {
@@ -721,6 +866,9 @@ int main( int argc, char *argv[] )
             			configInfo.mpi_numranks, configInfo.min_openmp_numthreads, configInfo.max_openmp_numthreads, configInfo.sum_openmp_numthreads );
             }
     	}
+    	if ( max_wait_time > 0 ) {
+    		printf( "Computing the surface of the Mandelbrot fractal for %lds.\n", max_wait_time );
+    	}
     	printf( "\n" );
     }
 
@@ -735,7 +883,7 @@ int main( int argc, char *argv[] )
 
     	error = mandelSurface( &configInfo, max_wait_time, &mandel_surface );
     	if ( ( error == 0 ) && ( configInfo.mpi_myrank == 0 ) )
-    		printf( "Approximation for the surface of the Mandelbroot fractal: %16.14lg\n\n", mandel_surface );
+    		printf( "Approximation for the surface of the Mandelbrot fractal: %16.14lg\n\n", mandel_surface );
 
     	data_gather_print( &configInfo, option_label, show_numamask, show_rangemask );
 
@@ -743,8 +891,10 @@ int main( int argc, char *argv[] )
 
     // Close off properly.
 
+#ifdef WITH_MPI
     MPI_Barrier( MPI_COMM_WORLD );
     MPI_Finalize();
+#endif
 
     return 0;
 

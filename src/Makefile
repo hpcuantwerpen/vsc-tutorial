@@ -17,11 +17,15 @@ CC      ?= icc
 MPICC   ?= mpiicc
 CFLAGS  ?= -O2 -xHost
 OMPFLAG ?= -qopenmp
+DEFINES ?= -DHAVE_NUMALIB
+#DEFINES ?= -DHAVE_NUMALIB -DDEBUG
+LIBS    ?= -lnuma
 
 .SUFFIXES:
 
 examples : bindir \
-		   ../bin/omp_hello ../bin/mpi_hello ../bin/mpi_omp_hello ../bin/hybrid_hello \
+	       ../bin/serial_check ../bin/omp_check ../bin/mpi_check ../bin/mpi_omp_check \
+		   ../bin/omp_hello ../bin/mpi_hello ../bin/mpi_omp_hello \
 		   ../bin/eat_mem   ../bin/eat_cpu   ../bin/eat_disk
 
 clean : 
@@ -29,6 +33,11 @@ clean :
 	
 bindir :
 	-mkdir -p ../bin
+
+#
+# Simple hello world style programs,
+# separate source for each for increased readability.
+#
 
 omp_hello : ../bin/omp_hello
 ../bin/omp_hello : omp_hello.c
@@ -42,10 +51,30 @@ mpi_omp_hello : ../bin/mpi_omp_hello
 ../bin/mpi_omp_hello : mpi_omp_hello.c
 	$(MPICC) $(CFLAGS) $(OMPFLAG) $< -o $@
 
-hybrid_hello : ../bin/hybrid_hello
-../bin/hybrid_hello : hybrid_hello.c
-	$(MPICC) $(CFLAGS) $(OMPFLAG) -DHAVE_NUMALIB $< -lnuma -o $@
-#	$(MPICC) $(CFLAGS) $(OMPFLAG) -DDEBUG $< -o $@
+#
+# Cray acheck-like programs, common source to not have
+# to maintain multiple very similar versions.
+#
+
+serial_check : ../bin/serial_check
+../bin/serial_check : hybrid_check.c Makefile
+	$(CC) $(CFLAGS) $(DEFINES) $(LIBS) $< -o $@
+
+omp_check : ../bin/omp_check
+../bin/omp_check : hybrid_check.c Makefile
+	$(MPICC) $(CFLAGS) $(OMPFLAG) $(DEFINES) -DWITH_OMP $(LIBS) $< -o $@
+
+mpi_check : ../bin/mpi_check
+../bin/mpi_check : hybrid_check.c Makefile
+	$(MPICC) $(CFLAGS) $(OMPFLAG) $(DEFINES) -DWITH_MPI $(LIBS) $< -o $@
+
+mpi_omp__check : ../bin/mpi_omp__check
+../bin/mpi_omp_check : hybrid_check.c Makefile
+	$(MPICC) $(CFLAGS) $(OMPFLAG) $(DEFINES) -DWITH_MPI -DWITH_OMP $(LIBS) $< -o $@
+
+#
+# Testing memory, CPU and disk load
+#
 
 eat_mem : ../bin/eat_mem
 ../bin/eat_mem : eat_mem.c
