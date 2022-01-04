@@ -11,6 +11,5 @@ ml calcua/2020a
 ml intel/2020a
 
 export OMP_PROC_BIND=true
-#srun ../bin/hybrid_hello
-srun --ntasks=4 --cpus-per-task=4 ../../bin/hybrid_hello -l exe1 -w 5 -n -r : \
-     --ntasks=2 --cpus-per-task=8 ../../bin/hybrid_hello -l exe2
+srun --ntasks=4 --cpus-per-task=4 ../../bin/mpi_omp_check -l exe1 -w 5 -n -r : \
+     --ntasks=2 --cpus-per-task=8 ../../bin/mpi_omp_check -l exe2
