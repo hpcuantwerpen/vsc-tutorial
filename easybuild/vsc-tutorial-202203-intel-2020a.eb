@@ -34,7 +34,7 @@ toolchain = {'name': 'intel', 'version': '2020a'}
 toolchainopts = {'usempi': False,'openmp': False}
 
 # Downloading from GitHub releases..
-source_urls = ['https://github.com/hpcuantwerpen/vsc-tutorial/archive/']
+source_urls = ['https://github.com/hpcuantwerpen/vsc-tutorial/archive/refs/tags/']
 sources =     ['v%(version)s.tar.gz']
 
 prebuildopts = 'cd src ; '
