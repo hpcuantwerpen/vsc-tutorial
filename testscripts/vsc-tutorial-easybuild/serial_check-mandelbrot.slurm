@@ -1,10 +1,9 @@
 #! /bin/bash
-#SBATCH -J serial_check-multithread
-#SBATCH -n 1
-#SBATCH -c 1
-#SBATCH -t 5:00
-#SBATCH --hint=multithread
-#SBATCH -o %x-%j.out
+#SBATCH --job-name=serial_check-mandelbrot
+#SBATCH --time=0:20
+#SBATCH --partition=debug
+#SBATCH --ntasks=1 --cpus-per-task=1
+#SBATCH --output=%x-%j.out
 
 module purge
 module load calcua/2020a
@@ -21,10 +20,7 @@ echo -e "\nTask set of the current shell:\n$(taskset -c -p $$)"
 echo "Running taskset on all tasks via srun:"
 srun bash -c 'echo "Task $SLURM_PROCID:  $(taskset -c -p $SLURM_TASK_PID)"' | sort
 
-echo -e "\n- Without srun\n"
-serial_check -r
-echo -e "\n- With srun\n"
-srun serial_check -r
+serial_check -l test -w 5 -n -r
 
 echo -e "\n\n\nCheck: SLURM environment variables\n"
 env | egrep ^SLURM

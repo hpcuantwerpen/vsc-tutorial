@@ -6,12 +6,13 @@
 #SBATCH --hint=multithread
 #SBATCH -o %x-%j.out
 
-#module purge
-#module load calcua/2020a
-#module load vsc-tutorial
+module purge
+module load calcua/2020a
+module load intel/2020a
+module load vsc-tutorial/202203-intel-2020a
 module list
 
-echo "Job name: $SLURM_JOB_NAME"
+echo -e "\nJob name: $SLURM_JOB_NAME"
 echo "Submitted from $SLURM_SUBMIT_HOST"
 echo "Running on $SLURM_JOB_NODELIST"
 echo -e "Running $SLURM_NTASKS tasks with $SLURM_CPUS_PER_TASK CPUs per task.\n"

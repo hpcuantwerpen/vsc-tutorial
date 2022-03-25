@@ -1,7 +1,7 @@
 easyblock = 'MakeCp'
 
 name =    'vsc-tutorial'
-version = '202201'
+version = '202203'
 
 homepage = 'https://www.vscentrum.be'
 
@@ -38,7 +38,7 @@ source_urls = ['https://github.com/hpcuantwerpen/vsc-tutorial/archive/']
 sources =     ['v%(version)s.tar.gz']
 
 prebuildopts = 'cd src ; '
-buildopts = 'OMPFLAG=-qopenmp -R '
+buildopts = 'OMPFLAG="-qopenmp" DEFINES="-DHAVE_NUMALIB" LIBS="-lnuma" '
 #start_dir = 'src'
 
 files_to_copy = [
