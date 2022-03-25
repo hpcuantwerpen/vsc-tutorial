@@ -12,6 +12,9 @@
 #  * HAVE_NUMALIB: Define this if the system has libnuma (relevant for
 #    hybrid_hello)
 #
+# Build examples:
+# make examples CC=icc MPICC=mpiicc CFLAGS=-O0 OMPFLAGS=-1openmp DEFINES=-DHAVE_NUMALIB LIBS=-lnuma
+#
 
 CC      ?= icc
 MPICC   ?= mpiicc
@@ -23,7 +26,7 @@ LIBS    ?= -lnuma
 
 .SUFFIXES:
 
-examples : bindir \
+examples : config bindir \
 	       ../bin/serial_check ../bin/omp_check ../bin/mpi_check ../bin/mpi_omp_check \
 		   ../bin/serial_hello ../bin/omp_hello ../bin/mpi_hello ../bin/mpi_omp_hello \
 		   ../bin/eat_mem   ../bin/eat_cpu   ../bin/eat_disk
@@ -33,6 +36,16 @@ clean :
 	
 bindir :
 	-mkdir -p ../bin
+	
+config :
+	@echo -e
+	@echo -e "C compiler:               " $(CC)
+	@echo -e "MPI C compiler:           " $(MPICC)
+	@echo -e "Compiler flags:           " $(CFLAGS)
+	@echo -e "OpenMP flag:              " $(OMPFLAG)
+	@echo -e "Preprocessor definitions: " $(DEFINES)
+	@echo -e "Additional libraries:     " $(LIBS)
+	@echo -e
 
 #
 # Simple hello world style programs,
