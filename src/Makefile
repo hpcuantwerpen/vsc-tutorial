@@ -13,7 +13,7 @@
 #    hybrid_hello)
 #
 # Build examples:
-# make examples CC=icc MPICC=mpiicc CFLAGS=-O0 OMPFLAGS=-1openmp DEFINES=-DHAVE_NUMALIB LIBS=-lnuma
+# make examples CC=icc MPICC=mpiicc CFLAGS=-O0 OMPFLAG=-qopenmp DEFINES=-DHAVE_NUMALIB LIBS=-lnuma
 #
 
 CC      ?= icc
