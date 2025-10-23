@@ -124,7 +124,7 @@ int main( int argc, char *argv[] )
             buf_rankData->corenum = &(buf_rankData->firstcore); // Because the pointer from the other process doesn't make sense.
 
             for ( int c2 = 0; c2 < buf_rankData->openmp_numthreads; c2++ ) {
-                printf( "++ MPI rank/OpenMP thread num (    %3d,   %3d) of (      %3d,             %3d) on cpu   %3d of %s\n",
+                printf( "++ Hello from MPI rank/OpenMP thread num (    %3d,   %3d) of (      %3d,             %3d) on cpu   %3d of %s!\n",
                         buf_rankData->mpi_myid, c2, mpi_numprocs, buf_rankData->openmp_numthreads,
                         buf_rankData->corenum[c2], buf_rankData->mpi_hostname );
 
