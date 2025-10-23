@@ -58,7 +58,7 @@ int main( int argc, char *argv[] )
     // Now print all data
     //
 
-    printf( "++ Running on cpu %d of %s\n", my_rankData.corenum, my_rankData.hostname );
+    printf( "++ Hello from cpu %d of %s!\n", my_rankData.corenum, my_rankData.hostname );
 
     return 0;
 

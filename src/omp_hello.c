@@ -85,7 +85,7 @@ int main( int argc, char *argv[] )
     printf( "++ Output format: thread num <thread> of <#threads> on cpu <cpu> of <host>\n" );
 
     for ( int c1 = 0; c1 < my_rankData->openmp_numthreads; c1++ ) {
-        printf( "++ OpenMP         thread num      %3d of        %3d on cpu   %3d of %s\n",
+        printf( "++ Hello from OpenMP         thread num      %3d of        %3d on cpu   %3d of %s!\n",
                 c1, my_rankData->openmp_numthreads, my_rankData->corenum[c1], my_rankData->hostname );
     }  // end for ( c1 = ...
 

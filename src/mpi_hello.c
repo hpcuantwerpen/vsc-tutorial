@@ -72,7 +72,7 @@ int main( int argc, char *argv[] )
 
             error = MPI_Recv( &buf_rankData, (int) sizeof( t_rankData ), MPI_BYTE, c1, 0, MPI_COMM_WORLD, &status );
 
-            printf( "++ MPI rank             %03d of         %3d on cpu    %2d of %s\n",
+            printf( "++ Hello from MPI rank             %03d of         %3d on cpu    %2d of %s!\n",
                     buf_rankData.mpi_id, mpi_numprocs, buf_rankData.corenum, buf_rankData.mpi_hostname );
 
         } // end for ( int c1 = 0; c1 < mpi_numprocs; c1++ )
