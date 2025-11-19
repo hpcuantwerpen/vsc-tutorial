@@ -116,7 +116,7 @@ int main( int argc, char *argv[] )
 
     if ( mpi_myid == 0 ) {
 
-        printf( "++ Output format:             (MPIrank,thread) of (#MPIprocs,#threads in rank) on cpu <cpu> of <host>\n" );
+        printf( "+++ Template: MPI rank/OpenMP thread num (MPIrank,thread) of (#MPIprocs,#threads in rank) on cpu <cpu> of <host>\n" );
 
         for ( int c1 = 0; c1 < mpi_numprocs; c1++ ) {
 
