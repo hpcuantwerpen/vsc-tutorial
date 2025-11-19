@@ -82,10 +82,10 @@ int main( int argc, char *argv[] )
     // Now print all data
     //
 
-    printf( "++ Output format: thread num <thread> of <#threads> on cpu <cpu> of <host>\n" );
+    printf( "+++ Template: OpenMP thread num <thread> of <#threads> on cpu <cpu> of <host>\n" );
 
     for ( int c1 = 0; c1 < my_rankData->openmp_numthreads; c1++ ) {
-        printf( "++ Hello from OpenMP         thread num      %3d of        %3d on cpu   %3d of %s!\n",
+        printf( "++ Hello from OpenMP thread num      %3d of        %3d on cpu   %3d of %s!\n",
                 c1, my_rankData->openmp_numthreads, my_rankData->corenum[c1], my_rankData->hostname );
     }  // end for ( c1 = ...
 
